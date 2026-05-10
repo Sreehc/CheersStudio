@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: cheersstudio-backend
+  profiles:
+    active: dev
+  jackson:
+    default-property-inclusion: non_null
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 30MB
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    banner: false
+
+app:
+  cors:
+    allowed-origins:
+      - http://localhost:3000
+      - http://127.0.0.1:3000
+  security:
+    jwt:
+      header: Authorization
+      prefix: Bearer
+      secret: ${APP_JWT_SECRET}
+      expiration-minutes: 120

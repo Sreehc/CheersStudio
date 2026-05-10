@@ -1,0 +1,8 @@
+package com.cheersstudio.auth.mapper;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.cheersstudio.auth.entity.AdminUserEntity;
+import org.apache.ibatis.annotations.Mapper;
+
+@Mapper
+public interface AdminUserMapper extends BaseMapper<AdminUserEntity> {}

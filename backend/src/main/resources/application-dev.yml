@@ -1,0 +1,21 @@
+spring:
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/cheersstudio?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+logging:
+  level:
+    com.cheersstudio: INFO
+
+aliyun:
+  oss:
+    enabled: true
+    endpoint: oss-cn-beijing.aliyuncs.com
+    region: ${ALIYUN_OSS_REGION:cn-beijing}
+    bucket-name: ${ALIYUN_OSS_BUCKET:cheers-studio}
+    access-key-id: ${ALIYUN_OSS_ACCESS_KEY_ID:}
+    access-key-secret: ${ALIYUN_OSS_ACCESS_KEY_SECRET:}
+    object-prefix: ${ALIYUN_OSS_OBJECT_PREFIX:cheers-studio}
+    public-url-prefix: ${ALIYUN_OSS_PUBLIC_URL_PREFIX:}
