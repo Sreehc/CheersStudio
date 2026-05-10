@@ -19,7 +19,7 @@ aliyun:
     enabled: true
     endpoint: oss-cn-beijing.aliyuncs.com
     region: ${ALIYUN_OSS_REGION:cn-beijing}
-    bucket-name: ${ALIYUN_OSS_BUCKET:cheers-studio}
+    bucket-name: ${ALIYUN_OSS_BUCKET_NAME:cheers-studio}
     access-key-id: ${ALIYUN_OSS_ACCESS_KEY_ID:}
     access-key-secret: ${ALIYUN_OSS_ACCESS_KEY_SECRET:}
     object-prefix: ${ALIYUN_OSS_OBJECT_PREFIX:cheers-studio}

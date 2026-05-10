@@ -5,8 +5,8 @@ This repository deploys to `studio.wandcheers.xyz` with Docker Compose on the se
 ## Production Topology
 
 - Nginx on the host listens on `80`
-- Frontend container listens on `127.0.0.1:3001`
-- Backend container listens on `127.0.0.1:8081`
+- Frontend container listens on `127.0.0.1:8089`
+- Backend container uses host networking and listens on `127.0.0.1:8081`
 - `https://studio.wandcheers.xyz/` proxies to the frontend
 - `https://studio.wandcheers.xyz/api/` proxies to the backend
 
@@ -41,8 +41,8 @@ Important values:
 - `NEXT_PUBLIC_API_BASE_URL=` must stay empty for same-origin `/api` requests
 - `APP_CORS_ALLOWED_ORIGINS=https://studio.wandcheers.xyz`
 - `SPRING_PROFILES_ACTIVE=prod`
-- `FRONTEND_PORT_MAPPING=127.0.0.1:3001:3000`
-- `BACKEND_PORT_MAPPING=127.0.0.1:8081:8080`
+- `FRONTEND_PORT_MAPPING=127.0.0.1:8089:3000`
+- `BACKEND_SERVER_PORT=8081`
 
 ## Database
 
@@ -75,4 +75,5 @@ mysql -uroot -p cheersstudio < sql/002_seed.sql
 
 - The backend now reads production settings from `application-prod.yml`.
 - The frontend now supports an empty `NEXT_PUBLIC_API_BASE_URL`, which is required for same-origin `/api` proxying.
-- The backend container reaches the host MySQL instance through `host.docker.internal`.
+- The backend container uses host networking in production so it can reach MySQL through `127.0.0.1` without broadening MySQL grants.
+- OSS bucket configuration uses `ALIYUN_OSS_BUCKET_NAME` to match Spring's `bucketName` property binding.

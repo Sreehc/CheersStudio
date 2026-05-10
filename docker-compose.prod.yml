@@ -8,11 +8,11 @@ services:
     image: cheersstudio-backend:latest
     container_name: cheersstudio-backend
     restart: unless-stopped
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    network_mode: host
     environment:
       TZ: Asia/Shanghai
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      SERVER_PORT: ${BACKEND_SERVER_PORT:-8081}
       SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
@@ -21,14 +21,12 @@ services:
       ALIYUN_OSS_ENABLED: ${ALIYUN_OSS_ENABLED:-false}
       ALIYUN_OSS_ENDPOINT: ${ALIYUN_OSS_ENDPOINT:-oss-cn-beijing.aliyuncs.com}
       ALIYUN_OSS_REGION: ${ALIYUN_OSS_REGION:-cn-beijing}
-      ALIYUN_OSS_BUCKET: ${ALIYUN_OSS_BUCKET:-}
+      ALIYUN_OSS_BUCKET_NAME: ${ALIYUN_OSS_BUCKET_NAME:-}
       ALIYUN_OSS_ACCESS_KEY_ID: ${ALIYUN_OSS_ACCESS_KEY_ID:-}
       ALIYUN_OSS_ACCESS_KEY_SECRET: ${ALIYUN_OSS_ACCESS_KEY_SECRET:-}
       ALIYUN_OSS_OBJECT_PREFIX: ${ALIYUN_OSS_OBJECT_PREFIX:-cheers-studio}
       ALIYUN_OSS_PUBLIC_URL_PREFIX: ${ALIYUN_OSS_PUBLIC_URL_PREFIX:-}
       JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
-    ports:
-      - "${BACKEND_PORT_MAPPING:-127.0.0.1:8081:8080}"
 
   frontend:
     build:
@@ -42,4 +40,4 @@ services:
     depends_on:
       - backend
     ports:
-      - "${FRONTEND_PORT_MAPPING:-127.0.0.1:3001:3000}"
+      - "${FRONTEND_PORT_MAPPING:-127.0.0.1:8089:3000}"

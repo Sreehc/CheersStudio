@@ -17,6 +17,7 @@ backend/.m2/
 .env
 .env.*
 !.env.example
+!.env.prod.example
 
 # editor
 .idea/

@@ -37,4 +37,13 @@ fi
 
 cp "$NGINX_SOURCE" "$NGINX_TARGET"
 nginx -t
-systemctl reload nginx
+if systemctl is-active --quiet nginx 2>/dev/null; then
+  systemctl reload nginx
+elif [[ -x /www/server/nginx/sbin/nginx ]]; then
+  /www/server/nginx/sbin/nginx -s reload
+elif command -v nginx >/dev/null 2>&1; then
+  nginx -s reload
+else
+  echo "nginx reload command not found" >&2
+  exit 1
+fi
