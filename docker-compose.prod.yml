@@ -2,17 +2,15 @@ name: cheersstudio-prod
 
 services:
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    image: cheersstudio-backend:latest
+    image: ${BACKEND_IMAGE:-ghcr.io/sreehc/cheersstudio-backend}:${BACKEND_IMAGE_TAG:-main}
     container_name: cheersstudio-backend
     restart: unless-stopped
-    network_mode: host
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       TZ: Asia/Shanghai
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
-      SERVER_PORT: ${BACKEND_SERVER_PORT:-8081}
+      SERVER_PORT: 8080
       SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
@@ -27,17 +25,24 @@ services:
       ALIYUN_OSS_OBJECT_PREFIX: ${ALIYUN_OSS_OBJECT_PREFIX:-cheers-studio}
       ALIYUN_OSS_PUBLIC_URL_PREFIX: ${ALIYUN_OSS_PUBLIC_URL_PREFIX:-}
       JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    ports:
+      - "127.0.0.1:${BACKEND_HOST_PORT:-8081}:8080"
+    networks:
+      - cheersstudio_net
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-}
-    image: cheersstudio-frontend:latest
+    image: ${FRONTEND_IMAGE:-ghcr.io/sreehc/cheersstudio-frontend}:${FRONTEND_IMAGE_TAG:-main}
     container_name: cheersstudio-frontend
     restart: unless-stopped
     depends_on:
       - backend
+    environment:
+      NODE_ENV: production
     ports:
-      - "${FRONTEND_PORT_MAPPING:-127.0.0.1:8089:3000}"
+      - "127.0.0.1:${FRONTEND_HOST_PORT:-8089}:3000"
+    networks:
+      - cheersstudio_net
+
+networks:
+  cheersstudio_net:
+    name: cheersstudio_net

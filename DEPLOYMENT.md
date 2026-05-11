@@ -1,79 +1,136 @@
 # Production Deployment
 
-This repository deploys to `studio.wandcheers.xyz` with Docker Compose on the server.
+This repository is deployed as two application images behind Baota/Nginx:
 
-## Production Topology
+- `ghcr.io/sreehc/cheersstudio-frontend`
+- `ghcr.io/sreehc/cheersstudio-backend`
 
-- Nginx on the host listens on `80`
-- Frontend container listens on `127.0.0.1:8089`
-- Backend container uses host networking and listens on `127.0.0.1:8081`
-- `https://studio.wandcheers.xyz/` proxies to the frontend
-- `https://studio.wandcheers.xyz/api/` proxies to the backend
+The server only keeps deployment assets, runtime env files, and pulled images. It does not build from source during normal releases.
 
-The localhost-only port bindings avoid conflicts with the existing sites already running on the server.
+## Runtime Topology
 
-## Files Added For Deployment
+- Public entrypoint: `https://studio.wandcheers.xyz`
+- Nginx host proxy:
+  - `/` -> `127.0.0.1:8089`
+  - `/api/` -> `127.0.0.1:8081`
+- Frontend container:
+  - Next.js standalone runtime
+  - container port `3000`
+  - host bind `127.0.0.1:8089`
+- Backend container:
+  - Spring Boot JAR runtime
+  - container port `8080`
+  - host bind `127.0.0.1:8081`
+- Docker network:
+  - `cheersstudio_net`
 
-- `backend/src/main/resources/application-prod.yml`
-- `backend/Dockerfile`
-- `frontend/Dockerfile`
+There is no active `/ws` route in the current codebase.
+
+## Server Layout
+
+Deploy into ` /srv/cheersstudio ` with these files:
+
 - `docker-compose.prod.yml`
+- `.env.prod`
+- `.env.release`
+- `.env.release.prev`
 - `deploy/deploy.sh`
 - `deploy/nginx/cheersstudio.conf`
-- `.github/workflows/deploy.yml`
-- `.env.prod.example`
+
+Baota owns the public Nginx site configuration and HTTPS certificate. Docker Compose owns only the app containers.
+
+## Environment Files
+
+### `.env.prod`
+
+Runtime configuration that changes rarely:
+
+- `SPRING_PROFILES_ACTIVE=prod`
+- `FRONTEND_HOST_PORT=8089`
+- `BACKEND_HOST_PORT=8081`
+- `NEXT_PUBLIC_API_BASE_URL=`
+- `SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/cheersstudio...`
+- `SPRING_DATASOURCE_USERNAME=...`
+- `SPRING_DATASOURCE_PASSWORD=...`
+- `APP_JWT_SECRET=...`
+- `APP_CORS_ALLOWED_ORIGINS=https://studio.wandcheers.xyz`
+- optional OSS settings
+
+Start from [.env.prod.example](/Users/cheers/Desktop/workspace/CheersStudio/.env.prod.example:1).
+
+### `.env.release`
+
+Release metadata written by CI:
+
+- `FRONTEND_IMAGE`
+- `FRONTEND_IMAGE_TAG`
+- `BACKEND_IMAGE`
+- `BACKEND_IMAGE_TAG`
+
+Start from [.env.release.example](/Users/cheers/Desktop/workspace/CheersStudio/.env.release.example:1).
+
+## First Deployment
+
+1. Create ` /srv/cheersstudio ` on the server.
+2. Copy deployment assets there.
+3. Create the MySQL database and import:
+   - `sql/001_schema.sql`
+   - `sql/002_seed.sql`
+4. Ensure the MySQL user can connect from Docker bridge containers.
+   - Recommended: grant to `cheersstudio@'%'` or at least the Docker bridge range.
+5. Create the Baota/Nginx site for `studio.wandcheers.xyz`.
+6. Install `.env.prod` and `.env.release`.
+7. Run `docker login ghcr.io`.
+8. Run `deploy/deploy.sh`.
+
+## Release Flow
+
+GitHub Actions handles release in this order:
+
+1. Build frontend image.
+2. Build backend image.
+3. Push both images to GHCR with:
+   - immutable tag: commit SHA
+   - moving tag: `main`
+4. Copy deployment assets to the server.
+5. Back up the previous `.env.release` to `.env.release.prev`.
+6. Write the new `.env.release`.
+7. Run `deploy/deploy.sh` remotely.
+
+The deploy script:
+
+1. Logs in to GHCR if pull credentials are supplied.
+2. Pulls both images.
+3. Restarts backend first.
+4. Waits for `http://127.0.0.1:8081/api/public/site-settings`.
+5. Restarts frontend second.
+6. Waits for `http://127.0.0.1:8089/`.
+7. Refreshes the Baota/Nginx config.
+
+## Rollback
+
+Rollback uses an existing image tag instead of rebuilding:
+
+1. Trigger `workflow_dispatch`.
+2. Set `release_tag` to the previous commit SHA.
+3. CI writes that SHA into `.env.release`.
+4. Server pulls the old images and re-runs Compose.
+
+`.env.release.prev` keeps the last deployed tag values for manual reference.
 
 ## Required GitHub Secrets
 
-- `DEPLOY_HOST`: `103.85.227.161`
-- `DEPLOY_PORT`: `22`
-- `DEPLOY_USER`: the SSH user used by Actions
-- `DEPLOY_PRIVATE_KEY`: private key content for that user
-- `DEPLOY_PATH`: recommended `/www/wwwroot/cheersstudio`
-- `PROD_ENV_FILE`: full contents of `.env.prod`
-
-## Recommended `.env.prod`
-
-Start from `.env.prod.example` and replace all placeholder values before deployment.
-
-Important values:
-
-- `NEXT_PUBLIC_API_BASE_URL=` must stay empty for same-origin `/api` requests
-- `APP_CORS_ALLOWED_ORIGINS=https://studio.wandcheers.xyz`
-- `SPRING_PROFILES_ACTIVE=prod`
-- `FRONTEND_PORT_MAPPING=127.0.0.1:8089:3000`
-- `BACKEND_SERVER_PORT=8081`
-
-## Database
-
-The server already has MySQL running. Create a dedicated database and user for this project before the first deployment.
-
-Example:
-
-```sql
-CREATE DATABASE cheersstudio CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'cheersstudio'@'%' IDENTIFIED BY 'replace-with-a-strong-password';
-GRANT ALL PRIVILEGES ON cheersstudio.* TO 'cheersstudio'@'%';
-FLUSH PRIVILEGES;
-```
-
-Then import:
-
-```bash
-mysql -uroot -p cheersstudio < sql/001_schema.sql
-mysql -uroot -p cheersstudio < sql/002_seed.sql
-```
-
-## First Deployment Checklist
-
-1. Add the GitHub repository secrets listed above.
-2. Create the MySQL database and import the SQL files.
-3. Point `studio.wandcheers.xyz` DNS to the server.
-4. Push to `main` or run the workflow manually.
+- `DEPLOY_HOST`
+- `DEPLOY_PORT`
+- `DEPLOY_USER`
+- `DEPLOY_PATH`
+- `DEPLOY_PRIVATE_KEY`
+- `GHCR_PULL_USERNAME`
+- `GHCR_PULL_TOKEN`
+- `PROD_ENV_FILE`
 
 ## Notes
 
-- The backend now reads production settings from `application-prod.yml`.
-- The frontend now supports an empty `NEXT_PUBLIC_API_BASE_URL`, which is required for same-origin `/api` proxying.
-- The backend container uses host networking in production so it can reach MySQL through `127.0.0.1` without broadening MySQL grants.
-- OSS bucket configuration uses `ALIYUN_OSS_BUCKET_NAME` to match Spring's `bucketName` property binding.
+- Frontend images are built with `NEXT_PUBLIC_API_BASE_URL=` so production traffic stays same-origin behind Nginx.
+- Backend production settings are read from [backend/src/main/resources/application-prod.yml](/Users/cheers/Desktop/workspace/CheersStudio/backend/src/main/resources/application-prod.yml:1).
+- OSS bucket env uses `ALIYUN_OSS_BUCKET_NAME` to match the Spring property binding.
